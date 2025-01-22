@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OMR Sheet</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        .container { 
+            width: 60%; 
+            margin: auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .question { 
+            margin: 15px 0; 
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .options label { 
+            display: block; 
+            margin: 5px 0; 
+            cursor: pointer;
+        }
+        .hidden { display: none; }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        #timer {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+        }
+        #result {
+            margin-top: 20px;
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h2>OMR Sheet</h2>
+    <div id="timer" class="hidden">Time: <span id="timeElapsed">0</span></div>
+    <div class="container">
+        <label>Number of Questions:</label>
+        <input type="number" id="numQuestions" min="1" value="5">
+        <br>
+        <label>Options per Question:</label>
+        <input type="number" id="numOptions" min="2" value="4">
+        <br>
+        <label>Enable Timer:</label>
+        <input type="checkbox" id="enableTimer">
+        <br><br>
+        <button onclick="generateOMR()">Start Test</button>
+        <br><br>
+        <div id="omrSheet"></div>
+        <br>
+        <button onclick="submitOMR()" class="hidden" id="submitBtn">Submit</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let startTime, timerInterval;
+        let questionTimes = {};
+        let lastAnsweredTime = 0;
+
+        function formatTime(seconds) {
+            let hrs = Math.floor(seconds / 3600);
+            let mins = Math.floor((seconds % 3600) / 60);
+            let secs = seconds % 60;
+            return `${hrs > 0 ? hrs + " hr " : ""}${mins > 0 ? mins + " min " : ""}${secs} sec`;
+        }
+
+        function generateOMR() {
+            const numQuestions = document.getElementById("numQuestions").value;
+            const numOptions = document.getElementById("numOptions").value;
+            const omrSheet = document.getElementById("omrSheet");
+            const enableTimer = document.getElementById("enableTimer").checked;
+
+            omrSheet.innerHTML = "";
+            questionTimes = {};
+            lastAnsweredTime = 0;
+            for (let i = 1; i <= numQuestions; i++) {
+                let questionDiv = document.createElement("div");
+                questionDiv.classList.add("question");
+                questionDiv.innerHTML = `<strong>Question ${i}:</strong>`;
+                let optionsDiv = document.createElement("div");
+                optionsDiv.classList.add("options");
+                for (let j = 1; j <= numOptions; j++) {
+                    optionsDiv.innerHTML += `<label><input type="radio" name="q${i}" value="Option ${j}" onclick="recordTime(${i})"> Option ${j}</label>`;
+                }
+                questionDiv.appendChild(optionsDiv);
+                omrSheet.appendChild(questionDiv);
+            }
+
+            document.getElementById("submitBtn").classList.remove("hidden");
+
+            if (enableTimer) {
+                document.getElementById("timer").classList.remove("hidden");
+                startTimer();
+            }
+        }
+
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                let elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById("timeElapsed").innerText = formatTime(elapsedSeconds);
+            }, 1000);
+        }
+
+        function recordTime(questionNumber) {
+            let currentTime = Math.floor((Date.now() - startTime) / 1000);
+            questionTimes[questionNumber] = currentTime - lastAnsweredTime;
+            lastAnsweredTime = currentTime;
+        }
+
+        function submitOMR() {
+            clearInterval(timerInterval);
+            const numQuestions = document.getElementById("numQuestions").value;
+            let resultHTML = "<h3>Results</h3>";
+            let totalTime = 0;
+            for (let i = 1; i <= numQuestions; i++) {
+                const selectedOption = document.querySelector(`input[name="q${i}"]:checked`);
+                let timeTaken = questionTimes[i] || 0;
+                totalTime += timeTaken;
+                resultHTML += `<p>Question ${i}: ${selectedOption ? selectedOption.value : "Not Answered"} (Time: ${formatTime(timeTaken)})</p>`;
+            }
+            resultHTML += `<p>Total Time Taken: ${formatTime(totalTime)}</p>`;
+            document.getElementById("result").innerHTML = resultHTML;
+        }
+    </script>
+</body>
+</html>
